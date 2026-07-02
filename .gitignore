@@ -1,12 +1,26 @@
 # ==========================================
-# 🐍 Python / Backend Configurations
+# OS / Editor
+# ==========================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ==========================================
+# Python / Backend Configurations
 # ==========================================
 # Virtual Environment
 backend/venv/
 venv/
+.venv/
+env/
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Local Vector Database & Uploads
 backend/chroma_db/
@@ -16,3 +30,20 @@ backend/uploads/
 # Environment Variables / Secret Keys
 .env
 backend/.env
+frontend/.env
+
+# ==========================================
+# Node / Frontend
+# ==========================================
+node_modules/
+frontend/node_modules/
+frontend/frontend/node_modules/
+dist/
+frontend/dist/
+frontend/frontend/dist/
+coverage/
+frontend/coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
