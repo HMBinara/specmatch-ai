@@ -1,0 +1,18 @@
+# ==========================================
+# 🐍 Python / Backend Configurations
+# ==========================================
+# Virtual Environment
+backend/venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local Vector Database & Uploads
+backend/chroma_db/
+chroma_db/
+backend/uploads/
+
+# Environment Variables / Secret Keys
+.env
+backend/.env
