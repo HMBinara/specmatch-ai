@@ -1,51 +1,62 @@
 import chromadb
+from chromadb import Documents, EmbeddingFunction, Embeddings
 import google.generativeai as genai
+from config import get_gemini_api_key
 
-# Initialize Persistent ChromaDB Client
-chroma_client = chromadb.PersistentClient(path="./chroma_db")
-cv_collection = chroma_client.get_or_create_collection(name="employee_cvs")
+genai.configure(api_key=get_gemini_api_key())
 
-def add_cv_to_vector_store(developer_name: str, filename: str, text_content: str):
-    """
-    Generates embedding using Gemini and stores document into ChromaDB.
-    """
-    embedding_response = genai.embed_content(
-        model="models/text-embedding-004",
-        content=text_content,
-        task_type="retrieval_document"
+
+class GeminiEmbeddingFunction(EmbeddingFunction):
+    """Uses Gemini's embedding API instead of downloading a local ONNX model."""
+    def __call__(self, input: Documents) -> Embeddings:
+        result = genai.embed_content(
+            model="models/gemini-embedding-001",
+            content=input,
+            task_type="retrieval_document"
+        )
+        return result["embedding"]
+
+
+_client = chromadb.PersistentClient(path="./chroma_db")
+_collection = _client.get_or_create_collection(
+    name="developer_cvs",
+    embedding_function=GeminiEmbeddingFunction(),
+    metadata={"hnsw:space": "cosine"}
+)
+
+
+def add_cv_to_vector_store(developer_name: str, filename: str, text: str):
+    """Add a developer's CV text into the persistent ChromaDB collection."""
+    doc_id = f"{developer_name}_{filename}"
+
+    _collection.upsert(
+        ids=[doc_id],
+        documents=[text],
+        metadatas=[{"developer_name": developer_name, "filename": filename}]
     )
-    vector = embedding_response['embedding']
+    print(f"[ChromaDB] Successfully added/updated CV for {developer_name}")
 
-    cv_collection.add(
-        embeddings=[vector],
-        documents=[text_content],
-        metadatas=[{"developer_name": developer_name, "filename": filename}],
-        ids=[f"cv_{developer_name.lower().replace(' ', '_')}_{filename}"]
+
+def query_matching_developers(tech_stack: list, n_results: int = 5) -> str:
+    """Query ChromaDB for developers whose CVs best match the tech stack."""
+    query_text = " ".join(tech_stack)
+
+    count = _collection.count()
+    if count == 0:
+        return ""
+
+    results = _collection.query(
+        query_texts=[query_text],
+        n_results=min(n_results, count)
     )
 
-def query_matching_developers(tech_stack_list: list, n_results: int = 5) -> str:
-    """
-    Queries ChromaDB based on technical stack and returns formatted context string.
-    """
-    query_text = ", ".join(tech_stack_list)
-    
-    embedding_response = genai.embed_content(
-        model="models/text-embedding-004",
-        content=query_text,
-        task_type="retrieval_query"
-    )
-    query_vector = embedding_response['embedding']
+    context_list = []
+    documents = results.get("documents", [[]])[0]
+    metadatas = results.get("metadatas", [[]])[0]
 
-    search_results = cv_collection.query(
-        query_embeddings=[query_vector],
-        n_results=n_results
-    )
+    for doc_text, meta in zip(documents, metadatas):
+        context_list.append(
+            f"Developer: {meta['developer_name']}\nSkills Context: {doc_text}"
+        )
 
-    retrieved_developers = []
-    if search_results and search_results['documents'] and len(search_results['documents'][0]) > 0:
-        for i in range(len(search_results['documents'][0])):
-            dev_name = search_results['metadatas'][0][i]['developer_name']
-            dev_skills = search_results['documents'][0][i]
-            retrieved_developers.append(f"Developer: {dev_name}\nSkills Summary: {dev_skills}\n---")
-
-    return "\n".join(retrieved_developers)
+    return "\n\n---\n\n".join(context_list)

@@ -8,4 +8,5 @@ def extract_text_from_pdf(pdf_contents: bytes) -> str:
     extracted_text = ""
     for page in doc:
         extracted_text += page.get_text()
+    doc.close()  # Memory leak නොවෙන්න document එක close කරනවා
     return extracted_text

@@ -1,7 +1,6 @@
 import json
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
 # Internal Imports
 from config import get_gemini_model
@@ -35,6 +34,12 @@ async def upload_cv(developer_name: str, file: UploadFile = File(...)):
 
         add_cv_to_vector_store(developer_name, file.filename, extracted_text)
         return {"status": "Success", "message": f"CV for {developer_name} uploaded successfully!"}
+    except HTTPException:
+        raise
+    except RuntimeError as e:
+        if "GEMINI_API_KEY" in str(e):
+            raise HTTPException(status_code=503, detail="GEMINI_API_KEY is not configured. Set it in the backend environment before uploading CVs.")
+        raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -68,6 +73,8 @@ async def analyze_rfp(file: UploadFile = File(...)):
         response = model.generate_content(prompt)
         cleaned_response = response.text.strip().replace("```json", "").replace("```", "")
         return {"status": "Success", "data": json.loads(cleaned_response)}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -108,5 +115,7 @@ async def match_resources(rfp_analysis: dict):
         response = model.generate_content(prompt)
         cleaned_response = response.text.strip().replace("```json", "").replace("```", "")
         return {"status": "Success", "report": json.loads(cleaned_response)}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
