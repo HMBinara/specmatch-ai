@@ -21,6 +21,7 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+backend/firebase-service-account.json
 
 # Local Vector Database & Uploads
 backend/chroma_db/
