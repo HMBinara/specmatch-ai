@@ -1,12 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
-import axios from 'axios';
 import {
     Upload, FileText, Users, Cpu, CheckCircle, AlertTriangle,
     TrendingUp, ScanLine, X, Loader2, FilePlus2, Target
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
+import api from '../api';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
 
 /* ---------------------------------------------------------
    Global styles: fonts + keyframes for the signature
@@ -220,8 +219,8 @@ export default function Dashboard() {
         formData.append('file', cvFile);
         setUploadingCv(true);
         try {
-            const res = await axios.post(
-                `${API_BASE_URL}/upload-cv/?developer_name=${encodeURIComponent(devName)}`,
+            const res = await api.post(
+                `/upload-cv/?developer_name=${encodeURIComponent(devName)}`,
                 formData
             );
             push(res.data.message || `${devName}'s CV was parsed and indexed.`, 'ok');
@@ -242,7 +241,7 @@ export default function Dashboard() {
         const formData = new FormData();
         formData.append('file', rfpFile);
         try {
-            const res = await axios.post(`${API_BASE_URL}/analyze-rfp/`, formData);
+            const res = await api.post('/analyze-rfp/', formData);
             setRfpData(res.data.data);
         } catch (err) {
             push(err.response?.data?.detail || 'Could not read that RFP. Try a different file.', 'error');
@@ -256,7 +255,7 @@ export default function Dashboard() {
         setLoadingMatch(true);
         setMatchReport(null);
         try {
-            const res = await axios.post(`${API_BASE_URL}/match-resources/`, rfpData);
+            const res = await api.post('/match-resources/', rfpData);
             setMatchReport(res.data.report);
             setActiveTab('match');
         } catch (err) {
