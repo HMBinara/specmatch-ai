@@ -1,11 +1,12 @@
 import json
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 # Internal Imports
 from config import get_gemini_model
 from pdf_processor import extract_text_from_pdf
 from vector_store import add_cv_to_vector_store, query_matching_developers
+from auth import verify_token
 
 app = FastAPI(title="SpecMatch AI Backend")
 
@@ -22,17 +23,21 @@ def read_root():
     return {"message": "SpecMatch AI FastAPI Backend is Running Successfully!"}
 
 @app.post("/upload-cv/")
-async def upload_cv(developer_name: str, file: UploadFile = File(...)):
+async def upload_cv(
+    developer_name: str,
+    file: UploadFile = File(...),
+    company_id: str = Depends(verify_token)   # <-- Auto-verifies token, extracts company_id
+):
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
     try:
         contents = await file.read()
         extracted_text = extract_text_from_pdf(contents)
-        
+
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="Could not extract text from the PDF.")
 
-        add_cv_to_vector_store(developer_name, file.filename, extracted_text)
+        add_cv_to_vector_store(company_id, developer_name, file.filename, extracted_text)
         return {"status": "Success", "message": f"CV for {developer_name} uploaded successfully!"}
     except HTTPException:
         raise
@@ -44,7 +49,10 @@ async def upload_cv(developer_name: str, file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/analyze-rfp/")
-async def analyze_rfp(file: UploadFile = File(...)):
+async def analyze_rfp(
+    file: UploadFile = File(...),
+    company_id: str = Depends(verify_token)
+):
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
     try:
@@ -79,13 +87,16 @@ async def analyze_rfp(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/match-resources/")
-async def match_resources(rfp_analysis: dict):
+async def match_resources(
+    rfp_analysis: dict,
+    company_id: str = Depends(verify_token)
+):
     try:
         tech_stack = rfp_analysis.get("technical_stack", [])
         if not tech_stack:
             raise HTTPException(status_code=400, detail="No technical stack found in incoming data.")
 
-        developers_context = query_matching_developers(tech_stack, n_results=5)
+        developers_context = query_matching_developers(company_id, tech_stack, n_results=5)
 
         model = get_gemini_model()
         prompt = f"""
@@ -119,3 +130,8 @@ async def match_resources(rfp_analysis: dict):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

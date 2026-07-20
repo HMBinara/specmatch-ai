@@ -25,35 +25,43 @@ _collection = _client.get_or_create_collection(
 )
 
 
-def add_cv_to_vector_store(developer_name: str, filename: str, text: str):
-    """Add a developer's CV text into the persistent ChromaDB collection."""
-    doc_id = f"{developer_name}_{filename}"
+def add_cv_to_vector_store(company_id: str, developer_name: str, filename: str, text: str):
+    """Add a developer's CV text into the persistent ChromaDB collection, scoped to a company."""
+    # company_id prefix guarantees no cross-company ID collisions
+    doc_id = f"{company_id}_{developer_name}_{filename}"
 
     _collection.upsert(
         ids=[doc_id],
         documents=[text],
-        metadatas=[{"developer_name": developer_name, "filename": filename}]
+        metadatas=[{
+            "company_id": company_id,
+            "developer_name": developer_name,
+            "filename": filename
+        }]
     )
-    print(f"[ChromaDB] Successfully added/updated CV for {developer_name}")
+    print(f"[ChromaDB] Added/updated CV for {developer_name} (company: {company_id})")
 
 
-def query_matching_developers(tech_stack: list, n_results: int = 5) -> str:
-    """Query ChromaDB for developers whose CVs best match the tech stack."""
+def query_matching_developers(company_id: str, tech_stack: list, n_results: int = 5) -> str:
+    """Query ChromaDB for developers matching the tech stack, scoped to a company only."""
     query_text = " ".join(tech_stack)
 
-    count = _collection.count()
-    if count == 0:
-        return ""
+    # Count only this company's documents before querying
+    company_count = _collection.count(where={"company_id": company_id}) if hasattr(_collection, "count") else None
 
     results = _collection.query(
         query_texts=[query_text],
-        n_results=min(n_results, count)
+        n_results=n_results,
+        where={"company_id": company_id}   # <-- ISOLATION filter, critical line
     )
 
-    context_list = []
     documents = results.get("documents", [[]])[0]
     metadatas = results.get("metadatas", [[]])[0]
 
+    if not documents:
+        return ""
+
+    context_list = []
     for doc_text, meta in zip(documents, metadatas):
         context_list.append(
             f"Developer: {meta['developer_name']}\nSkills Context: {doc_text}"
