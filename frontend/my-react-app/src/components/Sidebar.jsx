@@ -15,7 +15,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
     const handleLogout = async () => {
         await logout();
-        navigate('/', { replace: true });   // <-- '/' කියන්නේ localhost:5173/ (Landing Page)
+        // navigate() ඕන නෑ - currentUser null වුනාම ProtectedRoute එකෙන්ම "/" ට redirect කරනවා
     };
 
     return (

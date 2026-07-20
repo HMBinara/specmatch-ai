@@ -7,8 +7,17 @@ import Dashboard from './pages/Dashboard';
 import CompanyNameModal from './components/CompanyNameModal';
 
 function ProtectedRoute({ children }) {
-  const { currentUser } = useAuth();
-  return currentUser ? children : <Navigate to="/login" replace />;
+  const { currentUser, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#15181d] flex items-center justify-center">
+        <p className="text-[#5b636e] font-mono text-xs">Loading...</p>
+      </div>
+    );
+  }
+
+  return currentUser ? children : <Navigate to="/" replace />;   // <-- "/login" → "/"
 }
 
 function AppRoutes() {
