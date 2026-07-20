@@ -1,10 +1,11 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';   // <-- මේක import කරලා තියෙනවද check කරන්න
-import { Upload, FileText, Target, LogOut, Building2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Upload, FileText, Target, LogOut, Building2, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
     { id: 'upload', label: 'Ingest Talent', icon: Upload },
+    { id: 'developers', label: 'Developers', icon: Users },   // <-- අලුත් item එක
     { id: 'rfp', label: 'Analyze RFP', icon: FileText },
     { id: 'match', label: 'Run Fitment', icon: Target },
 ];

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
+import DeveloperList from '../components/DeveloperList';
 
 
 /* ---------------------------------------------------------
@@ -332,6 +333,17 @@ export default function Dashboard() {
                                     <span>STORAGE: PERSISTENT VECTOR LOG</span>
                                 </div>
                             </CornerFrame>
+                        </div>
+                    )}
+
+                    {/* DEVELOPERS TAB */}
+                    {activeTab === 'developers' && (
+                        <div className="animate-fadeUp">
+                            <h2 className="font-display text-xl font-700 mb-1">Talent pool</h2>
+                            <p className="font-body text-sm text-[#8b93a0] mb-6">
+                                Everyone currently indexed in your company's vector store.
+                            </p>
+                            <DeveloperList push={push} />
                         </div>
                     )}
 

@@ -68,3 +68,34 @@ def query_matching_developers(company_id: str, tech_stack: list, n_results: int 
         )
 
     return "\n\n---\n\n".join(context_list)
+
+def list_developers(company_id: str) -> list[dict]:
+    """Return all developers currently stored for this company."""
+    results = _collection.get(
+        where={"company_id": company_id},
+        include=["metadatas"]
+    )
+
+    ids = results.get("ids", [])
+    metadatas = results.get("metadatas", [])
+
+    developers = []
+    for doc_id, meta in zip(ids, metadatas):
+        developers.append({
+            "id": doc_id,
+            "developer_name": meta.get("developer_name", "Unknown"),
+            "filename": meta.get("filename", "unknown.pdf"),
+        })
+    return developers
+
+
+def delete_developer(company_id: str, doc_id: str) -> bool:
+    """Delete a specific developer's CV, scoped to the company (safety check)."""
+    existing = _collection.get(ids=[doc_id], include=["metadatas"])
+    metadatas = existing.get("metadatas", [])
+
+    if not metadatas or metadatas[0].get("company_id") != company_id:
+        return False  # Doesn't exist or belongs to another company
+
+    _collection.delete(ids=[doc_id])
+    return True

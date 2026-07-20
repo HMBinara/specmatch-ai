@@ -7,6 +7,7 @@ from config import get_gemini_model
 from pdf_processor import extract_text_from_pdf
 from vector_store import add_cv_to_vector_store, query_matching_developers
 from auth import verify_token
+from vector_store import add_cv_to_vector_store, query_matching_developers, list_developers, delete_developer
 
 app = FastAPI(title="SpecMatch AI Backend")
 
@@ -126,6 +127,27 @@ async def match_resources(
         response = model.generate_content(prompt)
         cleaned_response = response.text.strip().replace("```json", "").replace("```", "")
         return {"status": "Success", "report": json.loads(cleaned_response)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/developers/")
+async def get_developers(company_id: str = Depends(verify_token)):
+    try:
+        developers = list_developers(company_id)
+        return {"status": "Success", "developers": developers}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/developers/{doc_id}")
+async def remove_developer(doc_id: str, company_id: str = Depends(verify_token)):
+    try:
+        deleted = delete_developer(company_id, doc_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Developer not found in your workspace.")
+        return {"status": "Success", "message": "Developer removed successfully."}
     except HTTPException:
         raise
     except Exception as e:
