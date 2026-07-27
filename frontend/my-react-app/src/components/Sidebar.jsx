@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, FileText, Target, LogOut, Building2, Users, History } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
@@ -45,11 +46,20 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                         <button
                             key={item.id}
                             onClick={() => setActiveTab(item.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-body transition-all
-                ${active ? 'bg-[#0e1013] text-[#eef0f3]' : 'text-[#8b93a0] hover:bg-[#0e1013]/50 hover:text-[#dfe2e6]'}`}
+                            className={`relative w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-body transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5eead4]/60 focus-visible:ring-offset-0 overflow-hidden
+                ${active ? 'text-[#eef0f3]' : 'text-[#8b93a0] hover:bg-[#0e1013]/50 hover:text-[#dfe2e6]'}`}
                         >
-                            <Icon className="w-4 h-4 shrink-0" />
-                            {item.label}
+                            {active && (
+                                <motion.div
+                                    layoutId="sidebar-active-pill"
+                                    className="absolute inset-0 rounded-lg bg-[#0e1013] border border-[#2c313a] shadow-[0_10px_24px_rgba(0,0,0,0.22)]"
+                                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                                />
+                            )}
+                            <span className="relative z-10 flex items-center gap-2.5 w-full text-left">
+                                <Icon className="w-4 h-4 shrink-0" />
+                                {item.label}
+                            </span>
                         </button>
                     );
                 })}
@@ -58,7 +68,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             <div className="p-3 border-t border-[#2c313a]">
                 <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-body text-[#8b93a0] hover:bg-[#fb7862]/10 hover:text-[#fb7862] transition-all"
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-body text-[#8b93a0] hover:bg-[#fb7862]/10 hover:text-[#fb7862] transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fb7862]/40 focus-visible:ring-offset-0"
                 >
                     <LogOut className="w-4 h-4 shrink-0" />
                     Log out

@@ -1,8 +1,9 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
     Upload, FileText, Users, Cpu, CheckCircle, AlertTriangle,
     TrendingUp, ScanLine, X, Loader2, FilePlus2, Target, History as HistoryIcon
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
 import DeveloperList from '../components/DeveloperList';
@@ -42,6 +43,30 @@ const GlobalStyle = () => (
     }
     .animate-toastIn { animation: toastIn 0.25s ease-out both; }
 
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .animate-shimmer {
+            background-size: 200% 100%;
+            animation: shimmer 1.7s linear infinite;
+        }
+
+        @keyframes floatSoft {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-3px); }
+        }
+        .animate-floatSoft { animation: floatSoft 4.8s ease-in-out infinite; }
+
+        .premium-tilt {
+            transform-style: preserve-3d;
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+        .premium-tilt:hover {
+            transform: translateY(-2px) perspective(1000px) rotateX(1.4deg) rotateY(-1.2deg);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+        }
+
     @keyframes dash {
       to { stroke-dashoffset: 0; }
     }
@@ -59,13 +84,17 @@ const GlobalStyle = () => (
    Corner-bracket frame — the recurring "spec sheet" motif
 --------------------------------------------------------- */
 const CornerFrame = ({ children, className = '' }) => (
-    <div className={`relative ${className}`}>
+    <motion.div
+        whileHover={{ y: -3 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        className={`relative premium-tilt ${className}`}
+    >
         <span className="absolute -top-px -left-px w-3 h-3 border-t-2 border-l-2 border-[#3a4048] rounded-tl-md pointer-events-none" />
         <span className="absolute -top-px -right-px w-3 h-3 border-t-2 border-r-2 border-[#3a4048] rounded-tr-md pointer-events-none" />
         <span className="absolute -bottom-px -left-px w-3 h-3 border-b-2 border-l-2 border-[#3a4048] rounded-bl-md pointer-events-none" />
         <span className="absolute -bottom-px -right-px w-3 h-3 border-b-2 border-r-2 border-[#3a4048] rounded-br-md pointer-events-none" />
         {children}
-    </div>
+    </motion.div>
 );
 
 /* ---------------------------------------------------------
@@ -90,21 +119,86 @@ const ToastStack = ({ toasts, dismiss }) => {
     const dot = { ok: 'bg-[#4ade80]', error: 'bg-[#fb7862]' };
     return (
         <div className="fixed top-5 right-5 z-[100] flex flex-col gap-2 w-80">
-            {toasts.map((t) => (
-                <div
-                    key={t.id}
-                    className={`animate-toastIn flex items-start gap-3 rounded-xl border ${toneStyle[t.tone]} px-4 py-3 shadow-xl shadow-black/30`}
-                >
-                    <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${dot[t.tone]}`} />
-                    <p className="font-body text-sm text-[#dfe2e6] leading-snug flex-1">{t.message}</p>
-                    <button onClick={() => dismiss(t.id)} className="text-[#8b93a0] hover:text-white shrink-0">
-                        <X className="w-3.5 h-3.5" />
-                    </button>
-                </div>
-            ))}
+            <AnimatePresence>
+                {toasts.map((t) => (
+                    <motion.div
+                        key={t.id}
+                        initial={{ opacity: 0, x: 18, y: -6, scale: 0.98 }}
+                        animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, x: 18, scale: 0.98 }}
+                        transition={{ duration: 0.22, ease: 'easeOut' }}
+                        className={`flex items-start gap-3 rounded-xl border ${toneStyle[t.tone]} px-4 py-3 shadow-xl shadow-black/30`}
+                    >
+                        <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${dot[t.tone]}`} />
+                        <p className="font-body text-sm text-[#dfe2e6] leading-snug flex-1">{t.message}</p>
+                        <button onClick={() => dismiss(t.id)} className="text-[#8b93a0] hover:text-white shrink-0 transition-colors duration-150">
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    </motion.div>
+                ))}
+            </AnimatePresence>
         </div>
     );
 };
+
+const SkeletonBlock = ({ className = '' }) => (
+    <div className={`rounded-md bg-gradient-to-r from-[#1a1e25] via-[#2a3039] to-[#1a1e25] animate-shimmer ${className}`} />
+);
+
+const CountUp = ({ value = 0, className = '', duration = 700 }) => {
+    const [displayValue, setDisplayValue] = useState(value);
+
+    useEffect(() => {
+        let rafId;
+        const start = performance.now();
+        const initialValue = displayValue;
+        const target = Number(value) || 0;
+
+        const tick = (now) => {
+            const progress = Math.min((now - start) / duration, 1);
+            const nextValue = Math.round(initialValue + (target - initialValue) * progress);
+            setDisplayValue(nextValue);
+            if (progress < 1) {
+                rafId = requestAnimationFrame(tick);
+            }
+        };
+
+        rafId = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(rafId);
+    }, [value, duration]);
+
+    return <>{displayValue}</>;
+};
+
+const StructuredOutputSkeleton = () => (
+    <CornerFrame className="bg-[#1c2027] border border-[#2c313a] rounded-xl p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#2c313a] pb-4 mb-6">
+            <div className="space-y-2">
+                <SkeletonBlock className="h-3 w-32" />
+                <SkeletonBlock className="h-6 w-56" />
+            </div>
+            <SkeletonBlock className="h-10 w-36 rounded-lg" />
+        </div>
+        <div className="grid md:grid-cols-3 gap-5">
+            <div className="bg-[#0e1013] p-5 rounded-lg border border-[#2c313a] space-y-4">
+                <SkeletonBlock className="h-3 w-28" />
+                <div className="flex flex-wrap gap-2">
+                    {[1, 2, 3, 4].map((item) => (
+                        <SkeletonBlock key={item} className="h-6 w-20 rounded-md" />
+                    ))}
+                </div>
+            </div>
+            <div className="bg-[#0e1013] p-5 rounded-lg border border-[#2c313a] md:col-span-2 space-y-4">
+                <SkeletonBlock className="h-3 w-44" />
+                <div className="space-y-2">
+                    {[1, 2, 3].map((item) => (
+                        <SkeletonBlock key={item} className="h-3 w-full" />
+                    ))}
+                </div>
+            </div>
+        </div>
+    </CornerFrame>
+);
 
 /* ---------------------------------------------------------
    Drag & drop upload zone
@@ -126,7 +220,7 @@ const DropZone = ({ file, onFile, label, accept = '.pdf' }) => {
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
             onClick={() => inputRef.current?.click()}
-            className={`cursor-pointer rounded-xl border-2 border-dashed px-4 py-6 text-center transition-all
+            className={`cursor-pointer rounded-xl border-2 border-dashed px-4 py-6 text-center transition-all duration-200 active:scale-[0.98]
         ${dragOver ? 'border-[#5eead4] bg-[#5eead4]/5' : 'border-[#2c313a] bg-[#0e1013] hover:border-[#3a4048]'}`}
         >
             <input
@@ -153,13 +247,15 @@ const DropZone = ({ file, onFile, label, accept = '.pdf' }) => {
    Scan-sweep overlay — signature loading motion
 --------------------------------------------------------- */
 const ScanOverlay = ({ label }) => (
-    <div className="relative overflow-hidden rounded-xl border border-[#2c313a] bg-[#0e1013] px-5 py-6">
+    <div className="relative overflow-hidden rounded-xl border border-[#2c313a] bg-[#0e1013] px-5 py-6 shadow-[0_0_0_1px_rgba(94,234,212,0.04),0_18px_36px_rgba(0,0,0,0.25)]">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(94,234,212,0.12),transparent_28%),radial-gradient(circle_at_80%_30%,rgba(127,119,221,0.10),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.02),transparent)]" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#5eead4]/50 to-transparent" />
         <div className="flex items-center gap-3">
-            <ScanLine className="w-4 h-4 text-[#5eead4] shrink-0" />
+            <ScanLine className="w-4 h-4 text-[#5eead4] shrink-0 animate-floatSoft" />
             <p className="font-mono text-xs uppercase tracking-wider text-[#a7adb6]">{label}</p>
         </div>
-        <div className="mt-4 h-1.5 w-full bg-[#1c2027] rounded-full overflow-hidden relative">
-            <div className="absolute inset-y-0 left-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-[#5eead4] to-transparent animate-sweep" />
+        <div className="mt-4 h-1.5 w-full bg-[#1c2027] rounded-full overflow-hidden relative border border-[#2c313a]">
+            <div className="absolute inset-y-0 left-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-[#5eead4] to-transparent animate-sweep shadow-[0_0_14px_rgba(94,234,212,0.45)]" />
         </div>
     </div>
 );
@@ -173,15 +269,18 @@ const MatchGauge = ({ score = 0 }) => {
     const pct = Math.max(0, Math.min(100, score));
     const offset = c - (pct / 100) * c;
     const color = pct >= 75 ? '#4ade80' : pct >= 45 ? '#fbbf24' : '#fb7862';
+    const glow = pct >= 75 ? 'drop-shadow-[0_0_10px_rgba(74,222,128,0.32)]' : pct >= 45 ? 'drop-shadow-[0_0_10px_rgba(251,191,36,0.28)]' : 'drop-shadow-[0_0_10px_rgba(251,120,98,0.28)]';
     return (
-        <svg width="76" height="76" viewBox="0 0 76 76" className="shrink-0">
+        <svg width="76" height="76" viewBox="0 0 76 76" className={`shrink-0 ${glow}`}>
             <circle cx="38" cy="38" r={r} fill="none" stroke="#23272f" strokeWidth="6" />
             <circle
                 cx="38" cy="38" r={r} fill="none" stroke={color} strokeWidth="6"
                 strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset}
                 transform="rotate(-90 38 38)" style={{ transition: 'stroke-dashoffset 0.8s ease' }}
             />
-            <text x="38" y="34" textAnchor="middle" className="font-display" fill="#eef0f3" fontSize="16" fontWeight="700">{pct}</text>
+            <text x="38" y="34" textAnchor="middle" className="font-display" fill="#eef0f3" fontSize="16" fontWeight="700">
+                <CountUp value={pct} />
+            </text>
             <text x="38" y="48" textAnchor="middle" className="font-mono" fill="#5b636e" fontSize="8" letterSpacing="0.5">PERCENT</text>
         </svg>
     );
@@ -393,6 +492,12 @@ export default function Dashboard() {
                                 </form>
                                 {loadingRfp && <div className="mt-4"><ScanOverlay label="Extracting stack, features & constraints" /></div>}
                             </CornerFrame>
+
+                            {loadingRfp && !rfpData && (
+                                <div className="mt-2">
+                                    <StructuredOutputSkeleton />
+                                </div>
+                            )}
 
                             {rfpData && (
                                 <CornerFrame className="bg-[#1c2027] border border-[#2c313a] rounded-xl p-6 animate-fadeUp">

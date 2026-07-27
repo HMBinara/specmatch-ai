@@ -1,6 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, Loader2, Users, FileText } from 'lucide-react';
+import { motion } from 'framer-motion';
 import api from '../api';
+
+const rowContainer = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.05,
+        },
+    },
+};
+
+const rowItem = {
+    hidden: { opacity: 0, y: 8 },
+    show: { opacity: 1, y: 0 },
+};
+
+const SkeletonLine = ({ className = '' }) => (
+    <div className={`rounded-md bg-gradient-to-r from-[#1a1e25] via-[#2a3039] to-[#1a1e25] animate-shimmer ${className}`} />
+);
 
 export default function DeveloperList({ push }) {
     const [developers, setDevelopers] = useState([]);
@@ -41,8 +61,19 @@ export default function DeveloperList({ push }) {
 
     if (loading) {
         return (
-            <div className="flex items-center gap-2 text-[#8b93a0] text-sm font-body py-8 justify-center">
-                <Loader2 className="w-4 h-4 animate-spin" /> Loading developers…
+            <div className="bg-[#1c2027] border border-[#2c313a] rounded-xl overflow-hidden p-4">
+                <div className="space-y-3">
+                    <SkeletonLine className="h-4 w-32" />
+                    <div className="grid gap-3">
+                        {[1, 2, 3, 4].map((item) => (
+                            <div key={item} className="grid grid-cols-12 gap-3 items-center rounded-lg border border-[#2c313a] bg-[#0e1013] p-3">
+                                <SkeletonLine className="h-4 col-span-4" />
+                                <SkeletonLine className="h-4 col-span-5" />
+                                <SkeletonLine className="h-8 w-8 col-span-1 col-start-12 justify-self-end rounded-full" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }
@@ -50,7 +81,7 @@ export default function DeveloperList({ push }) {
     if (developers.length === 0) {
         return (
             <div className="text-center py-16 bg-[#1c2027]/40 border border-dashed border-[#2c313a] rounded-xl">
-                <Users className="w-10 h-10 text-[#3a4048] mx-auto mb-4" />
+                <Users className="w-10 h-10 text-[#3a4048] mx-auto mb-4 animate-floatSoft" />
                 <h3 className="font-display text-base font-600 mb-1">No developers yet</h3>
                 <p className="font-body text-sm text-[#5b636e]">
                     Upload a CV from the Ingest Talent tab to see it here.
@@ -69,9 +100,19 @@ export default function DeveloperList({ push }) {
                         <th className="p-3.5 text-right">Action</th>
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-[#2c313a]/60">
+                <motion.tbody
+                    className="divide-y divide-[#2c313a]/60"
+                    variants={rowContainer}
+                    initial="hidden"
+                    animate="show"
+                >
                     {developers.map((dev) => (
-                        <tr key={dev.id} className="hover:bg-[#0e1013]/50 transition-colors">
+                        <motion.tr
+                            key={dev.id}
+                            variants={rowItem}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="hover:bg-[#0e1013]/50 transition-all duration-200 hover:[transform:perspective(1000px)_translateY(-1px)_rotateX(1deg)]"
+                        >
                             <td className="p-3.5 font-body font-600 text-[#eef0f3]">{dev.developer_name}</td>
                             <td className="p-3.5">
                                 <span className="flex items-center gap-1.5 text-[#8b93a0] text-xs font-mono">
@@ -91,9 +132,9 @@ export default function DeveloperList({ push }) {
                                     )}
                                 </button>
                             </td>
-                        </tr>
+                        </motion.tr>
                     ))}
-                </tbody>
+                </motion.tbody>
             </table>
         </div>
     );
