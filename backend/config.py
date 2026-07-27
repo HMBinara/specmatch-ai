@@ -8,7 +8,7 @@ load_dotenv()
 def get_gemini_api_key():
     return os.getenv("GEMINI_API_KEY")
 
-def get_gemini_model(model_name="gemini-2.5-flash-lite"):
+def get_gemini_model(model_name="gemini-3.1-flash-lite"):
     """Returns a configured GenerativeModel instance."""
     api_key = get_gemini_api_key()
     if not api_key:

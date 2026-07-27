@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
     Upload, FileText, Users, Cpu, CheckCircle, AlertTriangle,
     TrendingUp, ScanLine, X, Loader2, FilePlus2, Target
@@ -6,6 +6,10 @@ import {
 import Sidebar from '../components/Sidebar';
 import api from '../api';
 import DeveloperList from '../components/DeveloperList';
+import { collection, addDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from '../context/AuthContext';
+
 
 
 /* ---------------------------------------------------------
@@ -193,6 +197,7 @@ const steps = [
 ];
 
 export default function Dashboard() {
+    const { currentUser } = useAuth();
     const [activeTab, setActiveTab] = useState('upload');
     const { toasts, push, dismiss } = useToasts();
 
@@ -259,12 +264,44 @@ export default function Dashboard() {
             const res = await api.post('/match-resources/', rfpData);
             setMatchReport(res.data.report);
             setActiveTab('match');
+
+            // Save to Firestore for persistence across refreshes
+            if (currentUser) {
+                await addDoc(collection(db, 'companies', currentUser.uid, 'reports'), {
+                    projectName: rfpData.project_name || 'Untitled project',
+                    rfpData,
+                    matchReport: res.data.report,
+                    createdAt: new Date().toISOString(),
+                });
+            }
         } catch (err) {
             push(err.response?.data?.detail || 'Matching failed. Try running it again.', 'error');
         } finally {
             setLoadingMatch(false);
         }
     };
+
+    useEffect(() => {
+        const loadLatestReport = async () => {
+            if (!currentUser) return;
+            try {
+                const q = query(
+                    collection(db, 'companies', currentUser.uid, 'reports'),
+                    orderBy('createdAt', 'desc'),
+                    limit(1)
+                );
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    const latest = snap.docs[0].data();
+                    setRfpData(latest.rfpData);
+                    setMatchReport(latest.matchReport);
+                }
+            } catch (err) {
+                console.error('Could not load saved report:', err);
+            }
+        };
+        loadLatestReport();
+    }, [currentUser]);
 
     return (
         <div className="min-h-screen bg-[#15181d] text-[#eef0f3] font-body flex">

@@ -46,9 +46,6 @@ def query_matching_developers(company_id: str, tech_stack: list, n_results: int 
     """Query ChromaDB for developers matching the tech stack, scoped to a company only."""
     query_text = " ".join(tech_stack)
 
-    # Count only this company's documents before querying
-    company_count = _collection.count(where={"company_id": company_id}) if hasattr(_collection, "count") else None
-
     results = _collection.query(
         query_texts=[query_text],
         n_results=n_results,

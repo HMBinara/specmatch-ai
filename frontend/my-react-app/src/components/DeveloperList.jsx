@@ -20,7 +20,10 @@ export default function DeveloperList({ push }) {
     };
 
     useEffect(() => {
-        fetchDevelopers();
+        const loadData = async () => {
+            await fetchDevelopers();
+        };
+        loadData();
     }, []);
 
     const handleDelete = async (docId, name) => {
