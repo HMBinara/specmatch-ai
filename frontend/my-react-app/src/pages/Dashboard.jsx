@@ -1,16 +1,16 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
     Upload, FileText, Users, Cpu, CheckCircle, AlertTriangle,
-    TrendingUp, ScanLine, X, Loader2, FilePlus2, Target
+    TrendingUp, ScanLine, X, Loader2, FilePlus2, Target, History as HistoryIcon
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
 import DeveloperList from '../components/DeveloperList';
-import { collection, addDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import HistoryList from '../components/HistoryList';
+import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-
-
+import HistoryDetail from '../components/HistoryDetail';
 
 /* ---------------------------------------------------------
    Global styles: fonts + keyframes for the signature
@@ -187,15 +187,6 @@ const MatchGauge = ({ score = 0 }) => {
     );
 };
 
-/* ---------------------------------------------------------
-   Pipeline step nav — numbering is real here (sequential steps)
---------------------------------------------------------- */
-const steps = [
-    { id: 'upload', num: '01', label: 'Ingest Talent', icon: Upload },
-    { id: 'rfp', num: '02', label: 'Analyze RFP', icon: FileText },
-    { id: 'match', num: '03', label: 'Run Fitment', icon: Target },
-];
-
 export default function Dashboard() {
     const { currentUser } = useAuth();
     const [activeTab, setActiveTab] = useState('upload');
@@ -214,6 +205,11 @@ export default function Dashboard() {
     // Matching
     const [matchReport, setMatchReport] = useState(null);
     const [loadingMatch, setLoadingMatch] = useState(false);
+    const [savingReport, setSavingReport] = useState(false);
+
+    const [historyDetail, setHistoryDetail] = useState(null);
+
+
 
     const handleCvUpload = async (e) => {
         e.preventDefault();
@@ -264,16 +260,6 @@ export default function Dashboard() {
             const res = await api.post('/match-resources/', rfpData);
             setMatchReport(res.data.report);
             setActiveTab('match');
-
-            // Save to Firestore for persistence across refreshes
-            if (currentUser) {
-                await addDoc(collection(db, 'companies', currentUser.uid, 'reports'), {
-                    projectName: rfpData.project_name || 'Untitled project',
-                    rfpData,
-                    matchReport: res.data.report,
-                    createdAt: new Date().toISOString(),
-                });
-            }
         } catch (err) {
             push(err.response?.data?.detail || 'Matching failed. Try running it again.', 'error');
         } finally {
@@ -281,28 +267,27 @@ export default function Dashboard() {
         }
     };
 
-    useEffect(() => {
-        const loadLatestReport = async () => {
-            if (!currentUser) return;
-            try {
-                const q = query(
-                    collection(db, 'companies', currentUser.uid, 'reports'),
-                    orderBy('createdAt', 'desc'),
-                    limit(1)
-                );
-                const snap = await getDocs(q);
-                if (!snap.empty) {
-                    const latest = snap.docs[0].data();
-                    setRfpData(latest.rfpData);
-                    setMatchReport(latest.matchReport);
-                }
-            } catch (err) {
-                console.error('Could not load saved report:', err);
-            }
-        };
-        loadLatestReport();
-    }, [currentUser]);
+    const handleSaveReport = async () => {
+        if (!currentUser || !matchReport || !rfpData) return;
+        setSavingReport(true);
+        try {
+            await addDoc(collection(db, 'companies', currentUser.uid, 'reports'), {
+                projectName: rfpData.project_name || 'Untitled project',
+                rfpData,
+                matchReport,
+                createdAt: new Date().toISOString(),
+            });
+            push('Fitment saved to history.', 'ok');
+        } catch (err) {
+            push('Could not save this fitment. Try again.', 'error');
+        } finally {
+            setSavingReport(false);
+        }
+    };
 
+    const handleSelectHistoryReport = (report) => {
+        setHistoryDetail(report);
+    };
     return (
         <div className="min-h-screen bg-[#15181d] text-[#eef0f3] font-body flex">
             <GlobalStyle />
@@ -310,8 +295,6 @@ export default function Dashboard() {
             <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
             <div className="flex-1 min-w-0">
-
-
                 <main className="max-w-6xl mx-auto px-6 py-8">
 
                     {/* STEP 01 — INGEST TALENT */}
@@ -465,6 +448,7 @@ export default function Dashboard() {
                     {/* STEP 03 — FITMENT MATRIX */}
                     {activeTab === 'match' && (
                         <div className="space-y-6 animate-fadeUp">
+
                             {loadingMatch ? (
                                 <ScanOverlay label="Scoring candidates against the requirement vector" />
                             ) : !matchReport ? (
@@ -483,6 +467,18 @@ export default function Dashboard() {
                                 </CornerFrame>
                             ) : (
                                 <div className="space-y-6 animate-fadeUp">
+                                    <div className="flex items-center justify-between">
+                                        <h2 className="font-display text-xl font-700">Fitment results</h2>
+                                        <button
+                                            onClick={handleSaveReport}
+                                            disabled={savingReport}
+                                            className="bg-[#5eead4] text-[#0b0e12] px-5 py-2.5 rounded-lg text-sm font-600 hover:bg-[#7ff2e2] disabled:opacity-50 transition-all flex items-center gap-2"
+                                        >
+                                            {savingReport ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                                            {savingReport ? 'Saving…' : 'Save fitment'}
+                                        </button>
+                                    </div>
+
                                     <div className="grid md:grid-cols-4 gap-5">
                                         <CornerFrame className="bg-[#1c2027] border border-[#2c313a] p-5 rounded-xl flex items-center gap-4">
                                             <MatchGauge score={matchReport.overall_match_score} />
@@ -557,6 +553,23 @@ export default function Dashboard() {
                                         <p className="font-body text-sm text-[#dfe2e6] leading-relaxed">{matchReport.hiring_recommendation}</p>
                                     </CornerFrame>
                                 </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* HISTORY TAB */}
+                    {activeTab === 'history' && (
+                        <div className="animate-fadeUp">
+                            {!historyDetail ? (
+                                <>
+                                    <h2 className="font-display text-xl font-700 mb-1">Fitment history</h2>
+                                    <p className="font-body text-sm text-[#8b93a0] mb-6">
+                                        Saved match results from previous RFPs.
+                                    </p>
+                                    <HistoryList onSelectReport={handleSelectHistoryReport} push={push} />
+                                </>
+                            ) : (
+                                <HistoryDetail report={historyDetail} onBack={() => setHistoryDetail(null)} />
                             )}
                         </div>
                     )}

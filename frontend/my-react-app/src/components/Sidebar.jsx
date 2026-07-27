@@ -1,15 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, FileText, Target, LogOut, Building2, Users } from 'lucide-react';
+import { Upload, FileText, Target, LogOut, Building2, Users, History } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
     { id: 'upload', label: 'Ingest Talent', icon: Upload },
-    { id: 'developers', label: 'Developers', icon: Users },   // <-- අලුත් item එක
+    { id: 'developers', label: 'Developers', icon: Users },
     { id: 'rfp', label: 'Analyze RFP', icon: FileText },
     { id: 'match', label: 'Run Fitment', icon: Target },
+    { id: 'history', label: 'History', icon: History },   // <-- අලුත් item එක
 ];
-
 export default function Sidebar({ activeTab, setActiveTab }) {
     const { companyName, logout } = useAuth();
     const navigate = useNavigate();   // <-- මේ line එකත් තියෙනවද check කරන්න
