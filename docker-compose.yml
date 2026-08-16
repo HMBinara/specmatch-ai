@@ -1,19 +1,39 @@
-version: '3.8'
-
 services:
+  # 1. Backend Service
   backend:
-    build: ./backend
+    image: hmbinara/specmatch-backend:v1
+    container_name: specmatch-backend
     ports:
       - "8000:8000"
+    env_file:
+      - ./backend/.env   # Backend folder එකේ තියෙන .env file එක direct පාවිච්චි කරයි
     environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - NEO4J_URI=${NEO4J_URI}
-      - NEO4J_USERNAME=${NEO4J_USERNAME}
-      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - NEO4J_URI=bolt://neo4j:7687  # Docker network එක ඇතුළේ Neo4j host name එක
+    depends_on:
+      - neo4j
+    restart: always
 
+  # 2. Frontend Service
   frontend:
-    build: ./frontend
+    image: hmbinara/specmatch-frontend:v1
+    container_name: specmatch-frontend
     ports:
-      - "5173:5173"
+      - "80:80"
     depends_on:
       - backend
+    restart: always
+
+  # 3. Neo4j Graph Database
+  neo4j:
+    image: neo4j:latest
+    container_name: specmatch-neo4j
+    ports:
+      - "7474:7474" # HTTP Browser UI
+      - "7687:7687" # Bolt Protocol
+    environment:
+      - NEO4J_AUTH=neo4j/password   # කැමති password එකක් දාන්න
+    volumes:
+      - neo4j_data:/data
+
+volumes:
+  neo4j_data:
