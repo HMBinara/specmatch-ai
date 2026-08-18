@@ -1,12 +1,19 @@
 # SpecMatch AI
 
-[![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61dafb?style=flat-square)](https://react.dev)
-[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square)](https://fastapi.tiangolo.com)
-[![AI](https://img.shields.io/badge/AI-Google%20Gemini-4285F4?style=flat-square)](https://ai.google.dev)
-[![Vector Store](https://img.shields.io/badge/Vector%20Store-ChromaDB-2ecc71?style=flat-square)](https://www.trychroma.com)
-[![Auth](https://img.shields.io/badge/Auth-Firebase%20Auth-ffca28?style=flat-square)](https://firebase.google.com)
+AI-powered developer-to-RFP matching platform for enterprise delivery teams.
 
-SpecMatch AI is an AI-driven multi-tenant spec and talent matchmaker built for enterprise delivery teams. It ingests developer CVs, analyzes RFPs with Gemini, and produces a fitment matrix that highlights match scores, critical skill gaps, and recommended team allocation in a workspace-scoped environment.
+SpecMatch AI helps teams ingest developer CVs, analyze client RFPs, and recommend resource fitment using Gemini AI, ChromaDB vector search, and Neo4j graph-based skill matching.
+
+## Overview
+
+This project combines:
+
+- React + Vite frontend for the user experience
+- FastAPI backend for file processing and AI orchestration
+- Firebase authentication and company-scoped access control
+- ChromaDB for semantic developer search
+- Neo4j for explicit skill relationship matching
+- Gemini for CV skill extraction, RFP analysis, and fitment reasoning
 
 ## Key Features
 
@@ -18,187 +25,239 @@ SpecMatch AI is an AI-driven multi-tenant spec and talent matchmaker built for e
 
 ## Tech Stack
 
-- Frontend: React.js, Vite, Tailwind CSS, Framer Motion, Lucide React, Axios, React Router.
-- Backend: FastAPI, Python 3.10+, PyMuPDF for PDF extraction, Gemini SDK, Firebase Admin SDK.
-- Database and vector storage: Firebase Firestore for workspace metadata and ChromaDB for developer embeddings.
-- Authentication and security: Firebase Auth with Bearer token verification through Firebase Admin SDK.
-- AI and LLM integration: Google Gemini for generation and embeddings.
+- Frontend: React, Vite, Tailwind CSS, Axios, Framer Motion, React Router
+- Backend: FastAPI, Uvicorn, Python-multipart
+- AI: Google Gemini Generative AI
+- Vector Store: ChromaDB
+- Graph Database: Neo4j
+- Authentication: Firebase Auth + Firebase Admin SDK
+- PDF processing: Python PDF extraction utilities
 
-> Current backend model configuration uses `gemini-3.1-flash-lite` for generation and `gemini-embedding-001` for embeddings. If you want to use another Gemini Flash model, update `backend/config.py`.
-
-## System Architecture
+## Current Architecture
 
 ```text
-			 +-----------------------------+
-			 |         React Frontend      |
-			 |  React Router + Tailwind    |
-			 |  Framer Motion + Axios      |
-			 +--------------+--------------+
-					  |
-					  | Firebase ID token
-					  v
-			 +--------------+--------------+
-			 |         FastAPI Backend     |
-			 |  /upload-cv/                |
-			 |  /analyze-rfp/              |
-			 |  /match-resources/          |
-			 |  /developers/               |
-			 +------+------------+---------+
-				 |            |
-		     PDF text  |            | Workspace metadata
-				 v            v
-		   +-----------+---+   +----+------------------+
-		   |   Gemini AI   |   | Firebase Firestore   |
-		   | generation +  |   | company profiles     |
-		   | embeddings    |   | history records      |
-		   +-----------+---+   +----------------------+
-				 |
-				 v
-		   +-----------+--------------------------------+
-		   | ChromaDB persistent vector store          |
-		   | company_id scoped developer embeddings    |
-		   +-------------------------------------------+
+Frontend (React + Vite)
+    |
+    | Firebase ID token
+    v
+FastAPI backend
+    |
+    +--> PDF processing
+    +--> Gemini analysis
+    +--> ChromaDB vector similarity search
+    +--> Neo4j graph skill matching
+    +--> Firebase company-scoped auth
+    |
+    +--> Developer records
+    +--> Fitment recommendations
 ```
-
-## Multi-Tenancy and Security
-
-Every authenticated user is mapped to a Firebase UID, and that UID is used as the workspace `company_id` throughout the backend.
-
-- Firestore stores workspace-level records under `companies/{uid}`.
-- Developer embeddings in ChromaDB are written with `company_id` metadata.
-- Search and delete operations always filter by `company_id` before returning data.
-- The backend verifies Firebase ID tokens on every protected API request through the `Authorization: Bearer <token>` header.
-
-This design prevents cross-tenant visibility into CV vectors, developer lists, and fitment history.
 
 ## Repository Structure
 
 ```text
 specmatch-ai/
-|-- backend/
-|   |-- app.py
-|   |-- auth.py
-|   |-- config.py
-|   |-- pdf_processor.py
-|   |-- vector_store.py
-|   |-- firebase-service-account.json
-|   |-- chroma_db/
-|   `-- uploads/
-|-- frontend/
-|   `-- my-react-app/
-|       |-- src/
-|       |   |-- App.jsx
-|       |   |-- api.js
-|       |   |-- firebase.js
-|       |   |-- context/
-|       |   `-- pages/
-|       `-- package.json
-|-- requirements.txt
-`-- README.md
+├── backend/
+│   ├── app.py
+│   ├── auth.py
+│   ├── config.py
+│   ├── firebase-service-account.json
+│   ├── graph_db.py
+│   ├── pdf_processor.py
+│   ├── vector_store.py
+│   ├── chroma_db/
+│   └── tests/
+├── frontend/
+│   └── my-react-app/
+│       ├── src/
+│       ├── package.json
+│       ├── vite.config.js
+│       └── index.html
+├── docker-compose.yml
+├── requirements.txt
+├── README.md
+└── .gitignore
 ```
 
-## Local Setup
+## Prerequisites
 
-### Prerequisites
+Before running the project, make sure you have:
 
-- Node.js 18+ and npm
 - Python 3.10+
+- Node.js 18+
+- npm
+- Docker Desktop or Docker Engine
 - Git
+- A Google Gemini API key
+- Firebase project credentials (web config + service account)
 
-### Clone the repository
+## Environment Setup
 
-```bash
-git clone <repository-url>
-cd specmatch-ai
+### 1) Backend environment
+
+Create a file named `backend/.env` with the values required by the application:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your_neo4j_password
 ```
 
-### Backend setup
+The backend also expects a Firebase admin service account file at:
 
-The backend app lives in `backend/`, while the shared Python dependency list is in the repository root `requirements.txt`.
+```text
+backend/firebase-service-account.json
+```
+
+This file is used by `backend/auth.py` for Firebase Admin SDK initialization.
+
+### 2) Frontend Firebase config
+
+Update the frontend Firebase config in:
+
+```text
+frontend/my-react-app/src/firebase.js
+```
+
+with your Firebase web app settings from the Firebase console.
+
+## Run the Project
+
+### Option A: Local development
+
+#### Backend
 
 ```bash
 cd backend
+python -m venv .venv
 ```
+
+On Windows:
 
 ```bash
-python -m venv venv
+.venv\Scripts\activate
 ```
 
-Activate the virtual environment:
+On macOS/Linux:
 
 ```bash
-venv\Scripts\activate
+source .venv/bin/activate
 ```
 
-Install Python dependencies:
+Then install the Python dependencies:
 
 ```bash
-pip install -r ..\requirements.txt
+pip install -r ../requirements.txt
 ```
 
-Configure backend secrets and credentials:
-
-- Add `GEMINI_API_KEY` to `backend/.env`.
-- Place your Firebase Admin service account file at `backend/firebase-service-account.json`.
-
-Run the backend API:
+Start the API:
 
 ```bash
-python -m uvicorn app:app --reload
+python -m uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The backend runs on `http://127.0.0.1:8000` by default.
+The backend will be available at:
 
-### Frontend setup
+```text
+http://localhost:8000
+```
 
-The React app lives in `frontend/my-react-app/`.
+#### Frontend
 
 ```bash
 cd frontend/my-react-app
 npm install
-```
-
-Firebase web configuration is currently defined in `src/firebase.js`. If you are connecting a different Firebase project, update that file with your own Firebase web app values.
-
-Start the frontend dev server:
-
-```bash
 npm run dev
 ```
 
-The Vite app runs on `http://localhost:5173` by default.
-
-## API Endpoints Summary
-
-All protected endpoints require a Firebase ID token in the `Authorization` header:
+The frontend dev server runs at:
 
 ```text
+http://localhost:5173
+```
+
+### Option B: Docker Compose
+
+This repository includes a `docker-compose.yml` for the application services.
+
+```bash
+docker compose up -d
+```
+
+The compose file currently includes:
+
+- backend
+- frontend
+- Neo4j
+
+Use the following values inside the compose setup if needed:
+
+```yaml
+NEO4J_AUTH=neo4j/password
+```
+
+For container-to-container communication, `NEO4J_URI` should typically be:
+
+```text
+bolt://neo4j:7687
+```
+
+## Authentication and Multi-tenancy
+
+The backend uses Firebase user IDs as the workspace/company identifier.
+
+- Each authenticated user is mapped to a Firebase UID
+- The UID is used as the `company_id`
+- ChromaDB developer vectors are filtered by `company_id`
+- Neo4j developer nodes are also scoped to the same company ID
+- Protected API routes depend on the Firebase Bearer token header
+
+Example:
+
+```http
 Authorization: Bearer <firebase-id-token>
 ```
 
-| Method | Endpoint | Purpose | Auth |
-|---|---|---|---|
-| GET | `/` | Health check / backend status | No |
-| POST | `/upload-cv/` | Upload and index a developer CV PDF | Yes |
-| POST | `/analyze-rfp/` | Extract RFP structure and requirements from a PDF | Yes |
-| POST | `/match-resources/` | Generate fitment score, team allocation, and gaps | Yes |
-| GET | `/developers/` | List company-scoped indexed developers | Yes |
-| DELETE | `/developers/{doc_id}` | Delete a developer record from the current workspace | Yes |
+The app includes a testing fallback in `backend/auth.py` for local or Swagger-based testing, but real deployments should validate the actual Firebase token.
+
+## API Endpoints
+
+### Public
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Backend health check |
+
+### Protected
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/upload-cv/` | Upload a CV PDF and index the developer |
+| POST | `/analyze-rfp/` | Analyze an RFP PDF and extract project data |
+| POST | `/match-resources/` | Match developers to an RFP using vector + graph retrieval |
+| GET | `/developers/` | List developers for the current company/workspace |
+| DELETE | `/developers/{doc_id}` | Remove a developer from the workspace |
 
 ### Request Notes
 
-- `/upload-cv/` expects a `developer_name` query parameter plus a PDF file upload.
-- `/analyze-rfp/` expects a PDF file upload and returns structured JSON with `project_name`, `technical_stack`, `core_features`, and `estimated_team_size`.
-- `/match-resources/` expects the JSON output from `/analyze-rfp/` and returns `overall_match_score`, `allocated_team`, `critical_skills_gap`, and `hiring_recommendation`.
+- `POST /upload-cv/` expects a `developer_name` field and a PDF file
+- `POST /analyze-rfp/` expects a PDF file
+- `POST /match-resources/` expects a JSON object containing project analysis data
 
-## Future Enhancements
+## Important Notes
 
-- Exportable PDF audit reports for client-facing delivery packs.
-- Automated candidate outreach workflows based on gap analysis.
-- Saved prompt templates and reusable RFP parsing profiles.
-- Role-based workspace administration and team-level permissions.
-- Enhanced analytics for historical match accuracy and delivery outcomes.
+- The backend currently uses Gemini model configuration set in `backend/config.py`
+- The default model is `gemini-3.1-flash-lite`
+- If you use a different Gemini model, update `backend/config.py`
+- Neo4j must be running before the backend starts if graph matching is enabled
+- `backend/chroma_db/` is used as the persistent local vector store directory
 
-## License
+## Future Improvements
 
-No license has been declared in this repository yet. Add one before distributing the project publicly.
+- Add exportable reports and audit summaries
+- Add role-based workspace controls
+- Improve frontend filtering and analytics
+- Expand graph relationships between skills and employee profiles
+- Support more job description and CV formats
+
+
